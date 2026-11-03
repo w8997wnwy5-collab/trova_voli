@@ -41,9 +41,9 @@ modules, so every strategy change is instant and explainable without re-querying
    multi-city, candidate cap with per-date and per-class diversity.
 5. **Ranking** = Σ weight × normalised component (cost, duration, stops, risk, airport changes, preference
    fit). Weights come from the "Save ↔ Comfort" slider or custom weights; tie-breaks are deterministic.
-6. **Persistence**: PostgreSQL (Prisma) for a shared provider-response cache and shared itinerary
-   snapshots; both fall back to in-memory stores when `DATABASE_URL` is unset. Favourites are local
-   (no accounts, no personal data).
+6. **Persistence**: PostgreSQL (Prisma) for a shared provider-response cache (falls back to memory when
+   `DATABASE_URL` is unset). Sharing is stateless: the URL holds the whole search and `focus=<id>` points
+   at one itinerary, re-priced on open. Favourites are local (no accounts, no personal data).
 7. **Security**: secrets stay server-side, Zod at every boundary, per-IP rate limits, structured logs with
    redaction, no payments, no passport data.
 
@@ -53,6 +53,6 @@ modules, so every strategy change is instant and explainable without re-querying
 2. Domain model, schemas, URL codec, presets.
 3. Providers: contract, mock network, Duffel.
 4. Plan → orchestrator → combine → cost → risk → dedupe/prune → rank/filters/impact/explain.
-5. API routes, rate limiting, logging, Prisma stores.
-6. UI: simple search, Trip Strategy drawer, results, calendar heatmap, compare, favourites, share.
+5. API routes, rate limiting, logging, Prisma cache store.
+6. UI: simple search, Trip Strategy drawer, results, calendar heatmap, compare, favourites, share links.
 7. Tests (Vitest unit + Playwright E2E + axe), lint, typecheck, build; README.
