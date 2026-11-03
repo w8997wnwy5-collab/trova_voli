@@ -125,4 +125,5 @@ large/medium airports, with IANA time zones from [mwgg/Airports](https://github.
    was not reachable from the build environment) and tune call budgets to the account's rate limits.
 2. Booking hand-off: Duffel Orders + payment flow, or deep links from an affiliate/metasearch partner.
 3. Additional licensed sources (e.g. an Amadeus Enterprise or Travelport contract, airline NDC partners).
-4. Shared rate limiting (Redis) and ECB/commercial FX feed in production.
+4. Verify `FX_SOURCE=ecb` against the live ECB feed (implemented, but the feed was not reachable from the
+   build environment; bundled approximate rates are used meanwhile).

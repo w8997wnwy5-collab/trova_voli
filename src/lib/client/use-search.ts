@@ -29,6 +29,8 @@ export function useSearch(request: SearchRequestInput | null, key: string, attem
     })
       .then(async (res) => {
         const json = await res.json().catch(() => ({}));
+        // A superseded request may finish reading after it was aborted: never show its data.
+        if (controller.signal.aborted) return;
         if (!res.ok) {
           setState({
             status: 'error',
@@ -41,7 +43,7 @@ export function useSearch(request: SearchRequestInput | null, key: string, attem
         setState({ status: 'success', data: json as SearchResponse });
       })
       .catch((err: unknown) => {
-        if ((err as Error).name === 'AbortError') return;
+        if ((err as Error).name === 'AbortError' || controller.signal.aborted) return;
         setState({ status: 'error', message: 'Network error: check your connection and try again.' });
       });
     return () => controller.abort();

@@ -32,7 +32,7 @@ export function PresetChips({
 }) {
   const ids = Object.keys(PRESET_LABELS) as PresetId[];
   return (
-    <div role="radiogroup" aria-label="Strategy preset" className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label="Strategy preset" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
       {ids.map((id) => {
         const Icon = ICONS[id];
         const active = value.preset === id;
@@ -51,7 +51,7 @@ export function PresetChips({
               if (id === 'weekend') onWeekend?.();
             }}
             className={cn(
-              'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-default',
+              'flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors disabled:cursor-default',
               active ? 'border-brand bg-brand text-brand-ink' : 'border-line bg-surface text-ink hover:border-brand/60',
               id === 'custom' && !active && 'opacity-60',
             )}

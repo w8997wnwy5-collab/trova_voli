@@ -18,6 +18,10 @@ export async function POST(request: Request) {
       { status: 429, headers: { ...headers, 'Retry-After': String(limit.retryAfterSeconds) } },
     );
   }
+  const declared = Number(request.headers.get('content-length') ?? 0);
+  if (declared > MAX_BODY_BYTES) {
+    return Response.json({ error: 'payload_too_large', message: 'Search request is too large.' }, { status: 413, headers });
+  }
   const text = await request.text();
   if (text.length > MAX_BODY_BYTES) {
     return Response.json({ error: 'payload_too_large', message: 'Search request is too large.' }, { status: 413, headers });

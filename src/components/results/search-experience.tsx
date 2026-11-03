@@ -199,11 +199,15 @@ export function SearchExperience() {
             key={`${key}|${Object.keys(labels).length}`}
             initial={formFromUrl(url, labels)}
             submitLabel={ready ? 'Update search' : 'Search flights'}
-            onOpenStrategy={() => setDrawerOpen(true)}
+            showPresets={!ready}
+            onOpenStrategy={ready ? () => setDrawerOpen(true) : undefined}
             onSubmit={(request) => {
               setEditing(false);
               setLimit(PAGE);
-              router.push(`/search?${encodeSearch({ request, sort: url.sort })}`);
+              // Keep rules changed in the drawer while the form was open; the form only owns the nearby switch.
+              const current = ready ? url.request.strategy : request.strategy;
+              const strategy = { ...current, nearbyAirports: { ...current.nearbyAirports, value: request.strategy.nearbyAirports.value } };
+              router.push(`/search?${encodeSearch({ request: { ...request, strategy }, sort: url.sort })}`);
             }}
           />
         ) : (
