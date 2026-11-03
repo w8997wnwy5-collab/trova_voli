@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* Semantic design tokens. Light and dark values are chosen for WCAG AA contrast. */
+:root {
+  --canvas: #f6f7fb;
+  --surface: #ffffff;
+  --subtle: #eef0f6;
+  --line: #d9dde8;
+  --ink: #141a2b;
+  --ink-muted: #4a5368;
+  --brand: #4338ca;
+  --brand-strong: #312e81;
+  --brand-soft: #e7e9ff;
+  --brand-ink: #ffffff;
+  --good: #046c4e;
+  --good-soft: #dcf5ea;
+  --warn: #8a4b06;
+  --warn-soft: #fdf0d5;
+  --bad: #b4122d;
+  --bad-soft: #fde4e8;
+  --demo: #6b21a8;
+  --demo-soft: #f3e8ff;
+  --focus: #2563eb;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0d1120;
+    --surface: #151b2e;
+    --subtle: #1d2439;
+    --line: #2d3650;
+    --ink: #e9ecf5;
+    --ink-muted: #a8b0c6;
+    --brand: #8b93ff;
+    --brand-strong: #b7bcff;
+    --brand-soft: #262c58;
+    --brand-ink: #0d1120;
+    --good: #5fd4a8;
+    --good-soft: #10382c;
+    --warn: #f3bf5c;
+    --warn-soft: #3d2c0b;
+    --bad: #ff8fa0;
+    --bad-soft: #451520;
+    --demo: #d8b4fe;
+    --demo-soft: #2e1745;
+    --focus: #93b4ff;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-demo: var(--demo);
+  --color-demo-soft: var(--demo-soft);
+  --color-focus: var(--focus);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.hatched {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--line) 70%, transparent) 6px 8px);
+}

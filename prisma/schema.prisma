@@ -1,0 +1,22 @@
+// Flight Hacker persistence. Everything here is optional at runtime: without DATABASE_URL the app
+// uses in-memory stores. No personal, passport or payment data is ever stored.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Provider responses reused within the provider's allowed caching window (shared across instances).
+model ProviderCacheEntry {
+  key       String   @id
+  provider  String
+  offers    Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
