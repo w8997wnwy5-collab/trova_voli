@@ -105,8 +105,8 @@ stale price, unknown baggage, few seats.
 | --- | --- |
 | Demo Air Network / Demo Budget Finder | Built in. Fictional airlines, deterministic fares, not bookable. |
 | **Duffel** (Flights API v2) | Implemented (offer requests, mapping, errors, retry, caching ≤ 5 min). Needs `DUFFEL_ACCESS_TOKEN`. Search only: booking needs the Orders API and payments, which are out of scope. |
-| Amadeus Self-Service | Not implemented: the self-service portal was shut down on 17 July 2026; enterprise access needs a contract. |
-| Kiwi Tequila | Not implemented: no longer open to new partners. |
+| Amadeus Self-Service | Not implemented: third-party migration guides report the self-service APIs were shut down on 17 July 2026 (enterprise access needs a contract). Confirm with Amadeus before relying on it. |
+| Kiwi Tequila | Not implemented: public sign-up was closed to new partners as far as known; not verifiable from the build environment. |
 
 Live-provider searches are budgeted (`DUFFEL_MAX_CALLS_PER_SEARCH`, default 12): the planner spends calls on
 the requested airports and central dates first, then nearby airports, hubs and positioning. Wide searches

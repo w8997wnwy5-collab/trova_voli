@@ -11,8 +11,9 @@ trade-offs explicit. Everything below is built in this repository; nothing is ps
 - Network checks from the build container: `api.duffel.com`, Duffel docs and the ECB FX feed are not
   reachable here, GitHub raw content is. Real-provider code is therefore verified with fixture tests built
   from Duffel's published TypeScript client types.
-- Amadeus Self-Service was shut down on 17 July 2026 and Kiwi Tequila no longer accepts new partners, so
-  **Duffel** is the real adapter. Others are listed as backlog, not faked.
+- Amadeus Self-Service is reported (third-party sources) as shut down on 17 July 2026, and Kiwi Tequila is
+  understood to be closed to new partners, so **Duffel** is the real adapter. Others are listed as backlog,
+  not faked.
 
 ## Architecture (data flow)
 
