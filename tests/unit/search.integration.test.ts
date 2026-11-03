@@ -77,7 +77,8 @@ describe('end-to-end search (demo providers)', () => {
     expect(Date.now() - started).toBeLessThan(8000);
     expect(res.candidates.length).toBeGreaterThan(50);
     expect(res.stats.itinerariesBuilt).toBeLessThanOrEqual(2500);
-    expect(new Set(res.candidates.map((c) => c.attrs.outboundDate)).size).toBeGreaterThan(10);
+    // Every searched departure date keeps at least one candidate (the price calendar has no false gaps).
+    expect(new Set(res.candidates.map((c) => c.attrs.outboundDate)).size).toBe(res.searchedDates.length);
   });
 
   it('supports one-way, open-jaw and multi-city trips', async () => {

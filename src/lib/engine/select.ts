@@ -49,24 +49,26 @@ export function prune(itineraries: Itinerary[], max: number): Itinerary[] {
     }
   };
   const byCostList = [...itineraries].sort(byCost);
-  take(byCostList.filter((i) => i.attrs.conventional), 12);
-  take(byCostList, Math.round(max * 0.35));
-  take([...itineraries].sort((a, b) => a.attrs.totalMinutes - b.attrs.totalMinutes || byCost(a, b)), Math.round(max * 0.1));
-  take([...itineraries].sort((a, b) => a.attrs.riskScore - b.attrs.riskScore || byCost(a, b)), 12);
-  take([...itineraries].sort((a, b) => a.attrs.totalStops - b.attrs.totalStops || byCost(a, b)), 12);
-  // Per outbound date (and trip length) so the calendar stays meaningful under any filter.
-  const groups = new Map<string, Itinerary[]>();
+  // 1) Every outbound date keeps its cheapest, cheapest conventional and cheapest "simple" option, so the
+  //    price calendar and date filters stay meaningful whatever rules the user applies later.
+  const byDate = new Map<string, Itinerary[]>();
   for (const it of byCostList) {
-    const key = `${it.attrs.outboundDate}|${it.attrs.nights ?? ''}`;
-    const list = groups.get(key) ?? [];
+    const list = byDate.get(it.attrs.outboundDate) ?? [];
     list.push(it);
-    groups.set(key, list);
+    byDate.set(it.attrs.outboundDate, list);
   }
-  for (const list of groups.values()) {
-    take(list, 2);
+  for (const list of byDate.values()) {
+    take(list, 1);
     take(list.filter((i) => i.attrs.conventional), 1);
     take(list.filter((i) => i.attrs.selfTransfers === 0 && !i.attrs.usesNearbyAirport), 1);
   }
+  // 2) Global representatives: cheapest, fastest, safest, fewest stops.
+  take(byCostList.filter((i) => i.attrs.conventional), 12);
+  take(byCostList, Math.round(max * 0.25));
+  take([...itineraries].sort((a, b) => a.attrs.totalMinutes - b.attrs.totalMinutes || byCost(a, b)), Math.round(max * 0.08));
+  take([...itineraries].sort((a, b) => a.attrs.riskScore - b.attrs.riskScore || byCost(a, b)), 10);
+  take([...itineraries].sort((a, b) => a.attrs.totalStops - b.attrs.totalStops || byCost(a, b)), 10);
+  // 3) Representatives of each strategy, so "what if" impacts in the drawer have real options.
   for (const pred of [
     (i: Itinerary) => i.attrs.selfTransfers > 0,
     (i: Itinerary) => i.attrs.usesNearbyAirport,
@@ -80,6 +82,15 @@ export function prune(itineraries: Itinerary[], max: number): Itinerary[] {
   ]) {
     take(byCostList.filter(pred), 8);
   }
+  // 4) Each trip length per date, then the cheapest of the rest.
+  const groups = new Map<string, Itinerary[]>();
+  for (const it of byCostList) {
+    const key = `${it.attrs.outboundDate}|${it.attrs.nights ?? ''}`;
+    const list = groups.get(key) ?? [];
+    list.push(it);
+    groups.set(key, list);
+  }
+  for (const list of groups.values()) take(list, 1);
   take(byCostList, max);
   return [...keep.values()].sort(byCost);
 }

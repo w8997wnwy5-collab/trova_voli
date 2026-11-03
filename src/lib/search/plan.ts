@@ -1,4 +1,3 @@
-import 'server-only';
 import { distanceKm, getAirport, metroOf, METRO_AREAS, nearbyAirports, resolveLocation } from '@/lib/data/airports';
 import { CONNECTION_HUBS } from '@/lib/data/hubs';
 import { addDays, daysBetween, DEFAULT_NIGHTS, monthDays, todayUtc, type SearchRequest } from '@/lib/domain/schemas';

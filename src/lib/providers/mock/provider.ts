@@ -1,4 +1,3 @@
-import 'server-only';
 import type { CabinClass, FareOffer, FareSlice, PassengerCounts } from '@/lib/domain/types';
 import { getAirport, resolveLocation } from '@/lib/data/airports';
 import { BUNDLED_RATES, convert } from '@/lib/util/fx';

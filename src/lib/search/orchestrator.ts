@@ -1,6 +1,5 @@
-import 'server-only';
 import type { FareOffer, ProviderStatus } from '@/lib/domain/types';
-import type { Logger } from '@/lib/server/logger';
+import type { LogSink } from '@/lib/util/log';
 import { ProviderError, type FlightProvider } from '@/lib/providers/types';
 import type { OfferCache } from './cache';
 import type { PlannedTask } from './plan';
@@ -13,7 +12,7 @@ export interface OrchestratorOptions {
   deadlineMs: number;
   /** Fault injection (tests/demos). */
   failProviders?: string[];
-  logger?: Logger;
+  logger?: LogSink;
 }
 
 export interface OrchestratorResult {

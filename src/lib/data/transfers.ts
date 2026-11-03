@@ -1,4 +1,3 @@
-import 'server-only';
 import { distanceKm, getAirport, sameCity } from './airports';
 
 export interface TransferEstimateEur {

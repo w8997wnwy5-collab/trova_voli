@@ -3,13 +3,9 @@ import { getAirport } from '@/lib/data/airports';
 import { config } from '@/lib/server/config';
 import { DuffelProvider } from './duffel/provider';
 import { MockProvider } from './mock/provider';
-import type { FlightProvider } from './types';
+import type { FlightProvider, InactiveProvider } from './types';
 
-export interface InactiveProvider {
-  id: string;
-  name: string;
-  reason: string;
-}
+export type { InactiveProvider } from './types';
 
 let cache: { active: FlightProvider[]; inactive: InactiveProvider[] } | undefined;
 

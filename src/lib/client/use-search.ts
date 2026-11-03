@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { SearchRequestInput } from '@/lib/domain/schemas';
 import type { SearchResponse } from '@/lib/domain/types';
+import { STATIC_MODE } from './runtime';
 
 export type SearchState =
   | { status: 'idle' }
@@ -21,6 +22,18 @@ export function useSearch(request: SearchRequestInput | null, key: string, attem
     queueMicrotask(() => {
       if (!controller.signal.aborted) setState({ status: 'loading', startedAt });
     });
+    if (STATIC_MODE) {
+      import('./browser-search')
+        .then((m) => m.runBrowserSearch(request))
+        .then((r) => {
+          if (controller.signal.aborted) return;
+          setState(r.ok ? { status: 'success', data: r.data } : { status: 'error', message: r.message, issues: r.issues });
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setState({ status: 'error', message: 'The search failed unexpectedly. Please try again.' });
+        });
+      return () => controller.abort();
+    }
     fetch('/api/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

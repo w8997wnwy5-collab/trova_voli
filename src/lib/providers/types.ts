@@ -47,6 +47,13 @@ export interface FlightProvider {
   search(query: ProviderQuery, ctx: ProviderContext): Promise<FareOffer[]>;
 }
 
+/** A known source that is not active in this deployment (shown honestly in the status bar). */
+export interface InactiveProvider {
+  id: string;
+  name: string;
+  reason: string;
+}
+
 export type ProviderErrorKind = 'auth' | 'rate-limit' | 'timeout' | 'upstream' | 'invalid-request' | 'network' | 'simulated';
 
 export class ProviderError extends Error {

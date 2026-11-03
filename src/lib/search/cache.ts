@@ -1,4 +1,3 @@
-import 'server-only';
 import type { FareOffer } from '@/lib/domain/types';
 
 export interface OfferCache {

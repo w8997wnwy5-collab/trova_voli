@@ -45,7 +45,10 @@ modules, so every strategy change is instant and explainable without re-querying
 6. **Persistence**: PostgreSQL (Prisma) for a shared provider-response cache (falls back to memory when
    `DATABASE_URL` is unset). Sharing is stateless: the URL holds the whole search and `focus=<id>` points
    at one itinerary, re-priced on open. Favourites are local (no accounts, no personal data).
-7. **Security**: secrets stay server-side, Zod at every boundary, per-IP rate limits, structured logs with
+7. **Two deployments from one codebase**: the server build (API routes, live providers, PostgreSQL) and a
+   static GitHub Pages build where the same isomorphic search core runs in the browser with the demo
+   providers only (`STATIC_EXPORT=1`, API routes excluded, airport data lazy-loaded).
+8. **Security**: secrets stay server-side, Zod at every boundary, per-IP rate limits, structured logs with
    redaction, no payments, no passport data.
 
 ## Execution order

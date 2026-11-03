@@ -18,5 +18,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `src/lib/engine/{filters,rank,impact,explain}.ts` run in the browser: keep them pure (no `server-only` imports).
 - Server planning may only depend on search-scope fields (and `unusualRoutes`/`longStopovers`); every other
   strategy rule is a client-side filter so a URL always reproduces the same candidates.
+- `src/lib/search/core.ts` and everything it imports must stay isomorphic (no `server-only`, no Node APIs, no
+  env access): the GitHub Pages build runs it in the browser. Server wiring belongs in `service.ts`.
+- Never ship secrets to the static build: live providers stay server-only (`registry.ts`).
 - Do not log secrets, IPs (use `anonymizeIp`) or traveller data. No payments, no passport data.
-- Before committing: `npm run check`; for UI changes also `npm run build && npm run test:e2e`.
+- Before committing: `npm run check`; for UI changes also `npm run build && npm run test:e2e` and
+  `npm run build:pages && npm run test:pages`.

@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:pages": "node scripts/build-pages.mjs",
+    "preview:pages": "node scripts/serve-static.mjs",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
@@ -17,7 +19,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "data:airports": "node scripts/build-airports.mjs",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:pages": "playwright test --config playwright.pages.config.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

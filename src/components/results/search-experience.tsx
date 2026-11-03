@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { useFavorites } from '@/lib/client/favorites';
 import { fmtMoney } from '@/lib/client/format';
+import { STATIC_MODE } from '@/lib/client/runtime';
 import { useSearch } from '@/lib/client/use-search';
 import { PRESET_IDS, presetStrategy, type PresetId, type TripStrategy } from '@/lib/domain/strategy';
 import type { Itinerary } from '@/lib/domain/types';
@@ -43,9 +44,15 @@ function useLocationLabels(codes: string[]): Record<string, string> {
   useEffect(() => {
     if (!key) return;
     const controller = new AbortController();
-    fetch(`/api/airports?codes=${key}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : { results: [] }))
-      .then((j: { results: { code: string; label: string }[] }) => setLabels(Object.fromEntries(j.results.map((r) => [r.code, r.label]))))
+    const load: Promise<{ code: string; label: string }[]> = STATIC_MODE
+      ? import('@/lib/client/browser-search').then((m) => m.locationLabels(key.split(',')))
+      : fetch(`/api/airports?codes=${key}`, { signal: controller.signal })
+          .then((r) => (r.ok ? r.json() : { results: [] }))
+          .then((j: { results: { code: string; label: string }[] }) => j.results);
+    load
+      .then((results) => {
+        if (!controller.signal.aborted) setLabels(Object.fromEntries(results.map((r) => [r.code, r.label])));
+      })
       .catch(() => undefined);
     return () => controller.abort();
   }, [key]);
@@ -60,7 +67,9 @@ function describeTrip(url: UrlState, labels: Record<string, string>): string {
   let dates = '';
   if (r.tripType === 'multi-city' || r.tripType === 'open-jaw') dates = r.slices.map((s) => (s.date ? formatDay(s.date) : '')).join(' · ');
   else if (d?.mode === 'window') dates = `leave ${d.windowStart ? formatDay(d.windowStart) : ''} – ${d.windowEnd ? formatDay(d.windowEnd) : ''}`;
-  else if (d?.mode === 'month') dates = `any day in ${d.month}`;
+  else if (d?.mode === 'month' && d.month) {
+    dates = `any day in ${new Date(`${d.month}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`;
+  }
   else dates = `${d?.depart ? formatDay(d.depart) : ''}${r.tripType === 'return' && d?.return ? ` – ${formatDay(d.return)}` : ''}${d?.mode === 'flexible' ? ` (±${d.flexDays}d)` : ''}`;
   const p = r.passengers;
   const pax = (p?.adults ?? 1) + (p?.children ?? 0) + (p?.infants ?? 0);
@@ -106,7 +115,8 @@ export function SearchExperience() {
     (patch: Partial<Omit<UrlState, 'request'>> & { strategy?: TripStrategy }) => {
       const { strategy: s, ...rest } = patch;
       const next: UrlState = { ...url, ...rest, request: s ? { ...url.request, strategy: s } : url.request };
-      window.history.replaceState(null, '', `/search?${encodeSearch(next)}`);
+      // Relative query keeps the current path, including any deployment base path.
+      window.history.replaceState(null, '', `?${encodeSearch(next)}`);
     },
     [url],
   );
@@ -178,7 +188,7 @@ export function SearchExperience() {
       showToast('Copy failed — use the address bar instead');
     }
   };
-  const itineraryLink = (id: string) => `${window.location.origin}/search?${encodeSearch({ ...url, focus: id, date: undefined })}`;
+  const itineraryLink = (id: string) => `${window.location.origin}${window.location.pathname}?${encodeSearch({ ...url, focus: id, date: undefined })}`;
   const showItinerary = (id: string) => {
     const index = ranking.items.findIndex((i) => i.it.id === id);
     if (index >= limit) setLimit(index + 1);

@@ -18,7 +18,29 @@ ranks them by **total trip cost**, time and risk, with every trade-off explained
 > Without provider credentials the app runs on a **demo network**: fictional airlines over real airports,
 > deterministic synthetic fares. Demo results are labelled everywhere and are never presented as real.
 
-## Quick start
+## Online demo (GitHub Pages)
+
+**https://w8997wnwy5-collab.github.io/trova_voli/** — a static build in which the whole search engine runs
+in your browser (no server, no keys). Live providers need secret API keys and therefore a server, so the
+Pages site always uses the demo network.
+
+One-time setup: GitHub → **Settings → Pages → Build and deployment → Source: GitHub Actions**. After that,
+every push to the default branch runs the checks and deploys (`.github/workflows/pages.yml`); pushes to other
+branches only build and test.
+
+Preview the static site locally:
+
+```bash
+npm run build:pages
+```
+
+```bash
+npm run preview:pages
+```
+
+Then open http://localhost:4173/trova_voli/.
+
+## Quick start (full version with server)
 
 ```bash
 npm install            # also generates the Prisma client
@@ -39,6 +61,8 @@ To search real fares set `DUFFEL_ACCESS_TOKEN` (and usually `ENABLE_DEMO_PROVIDE
 | Command | What it does |
 | --- | --- |
 | `npm run dev` / `build` / `start` | Next.js dev server, production build, production server |
+| `npm run build:pages` / `preview:pages` | Static GitHub Pages build in `out/` (demo engine in the browser) and a local preview server |
+| `npm run test:pages` | Playwright smoke tests against the static build |
 | `npm run check` | Lint + typecheck + unit tests |
 | `npm run lint`, `npm run typecheck` | ESLint (Next config), `next typegen && tsc --noEmit` |
 | `npm test` | Vitest unit/integration tests (`TEST_DATABASE_URL=… npm test` also runs the Postgres test) |
@@ -59,10 +83,12 @@ src/
     domain/                 normalized flight model (types), Zod schemas, presets/strategy
     data/                   airports (3,180 with time zones), metro areas, hubs, entry rules, estimates
     providers/              adapter contract + mock (demo network) + Duffel; provider logic stays here
-    search/                 plan (airports × dates × hubs → prioritised tasks), orchestrator, cache
+    search/                 core (isomorphic pipeline), plan (airports × dates × hubs → tasks),
+                            orchestrator, cache; service.ts wires it for the server
     engine/                 combine · assemble · cost · risk · select (dedupe/prune) — server
                             filters · rank · impact · explain — pure, also run in the browser
     server/                 config (Zod env), logger (redaction), rate limits, Prisma, FX source
+    client/                 search hook, favourites, browser-search (static build only, lazy-loaded)
     url/                    shareable search URL codec
 prisma/                     schema + migrations (ProviderCacheEntry)
 tests/unit, tests/e2e       Vitest and Playwright suites

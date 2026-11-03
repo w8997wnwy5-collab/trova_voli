@@ -295,6 +295,13 @@ export function assemble(draft: DraftItinerary, ctx: AssembleContext): Itinerary
   const risk = assessRisk({ selfTransferMiss: selfMiss, protectedMiss: protMiss, airportChanges, overnightLayovers, overnightFlights, requiresEntry, transitVisaRisk, flags: uniqueFlags });
 
   const usesNearbyAirport = journeys.some((j) => j.accessTransfers.length > 0);
+  // The travel date is the requested date of the main flight: a positioning flight the evening before
+  // still belongs to the date the traveller searched for.
+  const mainDate = (ji: number) => {
+    const wanted = new Set(ctx.spec.journeys[ji]?.dates ?? []);
+    const dates = draft[ji].map((l) => l.offer.slices[l.slice].segments[0].departureLocal.slice(0, 10));
+    return dates.find((d) => wanted.has(d)) ?? dates[0];
+  };
   const selfConns = allConnections.filter((c) => c.kind === 'self-transfer');
   const outbound = journeys[0];
   const ret = ctx.spec.journeys.length === 2 && (ctx.spec.tripType === 'return' || ctx.spec.tripType === 'open-jaw') ? journeys[1] : undefined;
@@ -323,9 +330,9 @@ export function assemble(draft: DraftItinerary, ctx: AssembleContext): Itinerary
     transitVisaRisk,
     changeableFare: offers.every((o) => o.conditions?.changeable === true),
     conventional: offers.length === 1 && !usesNearbyAirport && selfTransfers === 0 && airportChanges === 0,
-    outboundDate: outbound.departureLocal.slice(0, 10),
-    returnDate: ret?.departureLocal.slice(0, 10),
-    nights: ret ? daysBetween(outbound.departureLocal.slice(0, 10), ret.departureLocal.slice(0, 10)) : undefined,
+    outboundDate: mainDate(0),
+    returnDate: ret ? mainDate(1) : undefined,
+    nights: ret ? daysBetween(mainDate(0), mainDate(1)) : undefined,
     outboundDepartMinutes: minutesOfDay(outbound.departureLocal),
     outboundWeekday: new Date(`${outbound.departureLocal.slice(0, 10)}T00:00:00Z`).getUTCDay(),
     returnDepartMinutes: ret ? minutesOfDay(ret.departureLocal) : undefined,

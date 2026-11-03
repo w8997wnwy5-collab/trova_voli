@@ -3,6 +3,7 @@
 import { MapPin } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { cn } from '@/components/ui/cn';
+import { STATIC_MODE } from '@/lib/client/runtime';
 
 export interface LocationValue {
   code: string;
@@ -46,10 +47,16 @@ export function LocationInput({
     if (query === null || query.trim().length < 2) return;
     const controller = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/airports?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : { results: [] }))
-        .then((j: { results: Suggestion[] }) => {
-          setResults(j.results);
+      const q = query.trim();
+      const load: Promise<Suggestion[]> = STATIC_MODE
+        ? import('@/lib/client/browser-search').then((m) => m.suggestLocations(q))
+        : fetch(`/api/airports?q=${encodeURIComponent(q)}`, { signal: controller.signal })
+            .then((r) => (r.ok ? r.json() : { results: [] }))
+            .then((j: { results: Suggestion[] }) => j.results);
+      load
+        .then((list) => {
+          if (controller.signal.aborted) return;
+          setResults(list);
           setActive(0);
           setOpen(true);
         })

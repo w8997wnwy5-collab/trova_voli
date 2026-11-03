@@ -1,4 +1,3 @@
-import 'server-only';
 import { getAirport, type Airport } from '@/lib/data/airports';
 import { GLOBAL_GATEWAYS } from '@/lib/data/hubs';
 import { addDays, weekday } from '@/lib/domain/schemas';

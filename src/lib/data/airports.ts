@@ -1,4 +1,3 @@
-import 'server-only';
 import type { AirportInfo } from '@/lib/domain/types';
 import { haversineKm } from '@/lib/util/geo';
 import rawAirports from './airports.json';
