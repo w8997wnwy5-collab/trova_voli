@@ -43,5 +43,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # With "Deploy from a branch", GitHub publishes the README through Jekyll instead of this build.
+      - name: Check that Pages publishes from GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type=$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null || echo not-enabled)
+          echo "GitHub Pages build type: $build_type"
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error title=GitHub Pages source::Set Settings > Pages > Build and deployment > Source to 'GitHub Actions' (currently: $build_type), then push or re-run."
+            exit 1
+          fi
       - id: deployment
         uses: actions/deploy-pages@v4

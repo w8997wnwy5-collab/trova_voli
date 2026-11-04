@@ -24,9 +24,10 @@ ranks them by **total trip cost**, time and risk, with every trade-off explained
 in your browser (no server, no keys). Live providers need secret API keys and therefore a server, so the
 Pages site always uses the demo network.
 
-One-time setup: GitHub → **Settings → Pages → Build and deployment → Source: GitHub Actions**. After that,
-every push to the default branch runs the checks and deploys (`.github/workflows/pages.yml`); pushes to other
-branches only build and test.
+One-time setup: GitHub → **Settings → Pages → Build and deployment → Source: GitHub Actions** (not "Deploy
+from a branch": that mode publishes this README through Jekyll instead of the app; the deploy job stops with
+an explicit error until the source is right). After that, every push to the default branch runs the checks
+and deploys (`.github/workflows/pages.yml`); pushes to other branches only build and test.
 
 Preview the static site locally:
 
