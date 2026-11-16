@@ -34,8 +34,10 @@ export interface BookingLink {
   fareName?: string;
   price?: Money;
   url: string;
-  /** Which flights this link books, e.g. "MXP → LGW" (self-transfer trips have one option per leg). */
+  /** Which flights this link books, e.g. "Outbound" (self-transfer trips have one option per leg). */
   legs?: string;
+  /** true: the page opens with this exact flight selected; false: a pre-filled search on that site. */
+  exactFlight?: boolean;
 }
 
 export interface ProviderLimits {

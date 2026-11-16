@@ -112,6 +112,8 @@ export interface FareOffer {
   seatsLeft?: number;
   /** The provider combined separately ticketed flights: its connections are not protected. */
   selfTransfer?: boolean;
+  /** The baggage allowance was inferred (airline type, distance), not stated by the provider. */
+  baggageAssumed?: boolean;
 }
 
 // ---------------------------------------------------------------------------

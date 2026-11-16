@@ -59,17 +59,19 @@ describe('Ignav request building', () => {
   it('sends only set optional fields and maps bags, passengers and stops', () => {
     const { path, body } = buildIgnavSearch(query([{ origin: 'BGY', destination: 'STN', departureDate: '2026-12-11' }], { bags: { carryOn: true, checked: 1 } }), 'IT');
     expect(path).toBe('/fares/one-way');
+    // Cabin bag priced by Ignav (only without max_stops); checked bags never sent (not priced by Ignav).
     expect(body).toEqual({
       origin: 'BGY',
       destination: 'STN',
       departure_date: '2026-12-11',
       adults: 2,
       cabin_class: 'economy',
-      max_stops: 1,
       market: 'IT',
       min_carry_on_bags: 1,
-      min_checked_bags: 1,
     });
+    const noBags = buildIgnavSearch(query([{ origin: 'BGY', destination: 'STN', departureDate: '2026-12-11' }], { bags: { carryOn: false, checked: 0 } }), 'IT');
+    expect(noBags.body.max_stops).toBe(1);
+    expect(noBags.body.min_carry_on_bags).toBeUndefined();
   });
 
   it('uses the round-trip endpoint and refuses open-jaw shapes', () => {
@@ -101,7 +103,10 @@ describe('Ignav mapping', () => {
     expect(o.price.total).toEqual({ amount: 12345, currency: 'EUR' });
     expect(o.selfTransfer).toBe(true);
     expect(o.booking).toMatchObject({ channel: 'links', handle: '5e4fcd2f1dc340649eb19f6ee2afb57a' });
-    expect(o.baggage).toEqual({ carryOn: 1, checked: null });
+    // Low-cost carriers: cabin bag priced in by the search filter, checked bag an estimated extra.
+    expect(o.baggage).toEqual({ carryOn: 1, checked: 0 });
+    expect(o.bagFees).toEqual({ checked: { amount: 3500, currency: 'EUR' }, source: 'estimate' });
+    expect(o.baggageAssumed).toBe(true);
     const [a, b] = o.slices[0].segments;
     expect(a.flightNumber).toBe('FR 1234');
     expect(new Date(a.departureUtc).toISOString()).toBe('2026-12-11T05:30:00.000Z');
@@ -233,5 +238,79 @@ describe('links to check and book elsewhere', () => {
     );
     expect(skyscannerUrl(search)).toBe('https://www.skyscanner.it/trasporti/voli/mxp/lgw/261211/261214/?adultsv2=2&cabinclass=economy&rtn=1&childrenv2=8');
     expect(skyscannerUrl({ ...search, slices: [search.slices[0]] })).toContain('/mxp/lgw/261211/?');
+  });
+});
+
+// Shape observed from the live API (one-way BGY→STN): leg-level carrier name, airport codes as strings,
+// UTC times with Z, observed_at, booking legs as strings and link specificity.
+describe('Ignav live response format', () => {
+  const live = {
+    origin: 'BGY',
+    destination: 'STN',
+    departure_date: '2026-12-11',
+    observed_at: '2026-11-16T09:59:00Z',
+    itineraries: [
+      {
+        price: { amount: 103.0, currency: 'EUR', status: 'verified' },
+        outbound: {
+          carrier: 'Ryanair',
+          duration_minutes: 125,
+          segments: [
+            {
+              marketing_carrier_code: 'FR',
+              flight_number: '2735',
+              operating_carrier_name: 'Ryanair',
+              departure_airport: 'BGY',
+              departure_time_local: '2026-12-11T06:35:00',
+              departure_timezone: 'Europe/Rome',
+              departure_time_utc: '2026-12-11T05:35:00Z',
+              arrival_airport: 'STN',
+              arrival_time_local: '2026-12-11T07:40:00',
+              arrival_timezone: 'Europe/London',
+              arrival_time_utc: '2026-12-11T07:40:00Z',
+              duration_minutes: 125,
+              aircraft: 'Boeing 737',
+            },
+          ],
+        },
+        cabin_class: 'economy',
+        has_mixed_carriers: false,
+        ignav_id: 'da0dda887a444c84bfffe662892e94d6',
+      },
+    ],
+  };
+
+  it('maps the live format', async () => {
+    const p = new IgnavProvider({ apiKey: 'ignav_test_key', tzOf: tz, fetchImpl: (async () => Response.json(live)) as unknown as typeof fetch });
+    const [o] = await p.search(query([{ origin: 'BGY', destination: 'STN', departureDate: '2026-12-11' }]), { signal: new AbortController().signal, requestId: 't', now: NOW });
+    expect(o.price.total).toEqual({ amount: 10300, currency: 'EUR' });
+    expect(o.passengers.adults).toBe(2);
+    expect(o.fetchedAt).toBe(Date.parse('2026-11-16T09:59:00Z'));
+    const s = o.slices[0].segments[0];
+    expect(s).toMatchObject({ flightNumber: 'FR 2735', origin: 'BGY', destination: 'STN', departureLocal: '2026-12-11T06:35', arrivalLocal: '2026-12-11T07:40', durationMinutes: 125 });
+    expect(s.marketingCarrier).toEqual({ code: 'FR', name: 'Ryanair' });
+    expect(o.selfTransfer).toBe(false);
+  });
+
+  it('assumes checked bags are included on long-haul legacy flights, and flags the assumption', () => {
+    const longHaul = structuredClone(live.itineraries[0]);
+    const seg = longHaul.outbound.segments[0];
+    Object.assign(seg, { marketing_carrier_code: 'AZ', flight_number: '608', arrival_airport: 'JFK', duration_minutes: 540, arrival_time_utc: '2026-12-11T14:35:00Z', arrival_timezone: 'America/New_York', arrival_time_local: '2026-12-11T09:35:00' });
+    longHaul.outbound.carrier = 'ITA Airways';
+    const o = mapIgnavItinerary(longHaul, { now: NOW, passengers: { adults: 1, children: 0, infants: 0 }, tzOf: tz }, 'economy')!;
+    expect(o.baggage.checked).toBe(1);
+    expect(o.baggageAssumed).toBe(true);
+    expect(o.bagFees).toBeUndefined();
+  });
+
+  it('labels booking options and exact-flight links', () => {
+    const links = mapBookingLinks({
+      booking_options: [
+        { legs: ['outbound'], links: [{ provider_name: 'Ryanair', provider_type: 'airline', specificity: 'exact_flight', url: 'https://www.ryanair.com/gb/en/trip/flights/select?originIata=BGY&outFlightNo=FR2735' }] },
+        { legs: ['outbound', 'inbound'], links: [{ provider_name: 'Agency', provider_type: 'agency', specificity: 'search', url: 'https://agency.example/s?x=1' }] },
+      ],
+    });
+    expect(links[0]).toMatchObject({ providerName: 'Ryanair', legs: 'Outbound', exactFlight: true });
+    expect(links[1]).toMatchObject({ providerName: 'Agency', legs: undefined, exactFlight: false });
   });
 });

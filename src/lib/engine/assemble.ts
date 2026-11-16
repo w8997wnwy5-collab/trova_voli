@@ -275,8 +275,10 @@ export function assemble(draft: DraftItinerary, ctx: AssembleContext): Itinerary
 
   // Ticket-level flags
   const needs = offers.map((o) => bagNeeds(o, ctx));
-  const bagsUnknown = needs.some((n) => n.unknownAllowance);
-  if (bagsUnknown) flags.push({ code: 'unknown-baggage', severity: 'info', message: 'The provider did not confirm the baggage allowance for every flight; fees are estimated.' });
+  const bagsUnknown = needs.some((n) => n.unknownAllowance) || offers.some((o) => o.baggageAssumed);
+  if (bagsUnknown) {
+    flags.push({ code: 'unknown-baggage', severity: 'info', message: 'Baggage allowance not confirmed for every flight: included bags and fees are estimated, check them on the booking page.' });
+  }
   const selfTransfers = journeys.reduce((s, j) => s + j.connections.filter((c) => c.kind === 'self-transfer').length, 0);
   if (offers.length > 1 && selfTransfers === 0) {
     flags.push({ code: 'separate-tickets', severity: 'info', message: `${offers.length} separate tickets: a change or cancellation on one does not carry over to the other.` });

@@ -63,6 +63,11 @@ Each search makes at most `IGNAV_MAX_CALLS_PER_SEARCH` (default 24) fare request
 request each and are fetched only when asked. Metro codes (MIL, LON) are expanded to their three main
 airports, because Ignav accepts airport codes only.
 
+Bags, as measured on the live API: when the search asks for a cabin bag, Ignav returns fares that include
+its fee (only if no stops limit is sent, so stops are filtered by the app). Checked bags are never priced
+by Ignav: the app assumes none on low-cost airlines and adds an estimated fee (€35 per bag per flight),
+assumes one on long-haul economy, and marks every such allowance as estimated.
+
 ## Quick start (full version with server)
 
 ```bash
@@ -77,7 +82,8 @@ Optional PostgreSQL (shared provider cache across instances):
 DATABASE_URL=postgresql://user:pass@localhost:5432/flight_hacker npm run db:deploy
 ```
 
-To search real fares set `DUFFEL_ACCESS_TOKEN` (and usually `ENABLE_DEMO_PROVIDERS=false`).
+To search real fares set `IGNAV_API_KEY` (and usually `ENABLE_DEMO_PROVIDERS=false`); `DUFFEL_ACCESS_TOKEN`
+adds Duffel as a second source.
 
 ## Commands
 
@@ -153,12 +159,13 @@ stale price, unknown baggage, few seats.
 | Source | Status |
 | --- | --- |
 | Demo Air Network / Demo Budget Finder | Built in. Fictional airlines, deterministic fares, not bookable. |
-| **Ignav** | Implemented: live one-way and round-trip fares, self-transfer combinations, booking links on demand. Needs `IGNAV_API_KEY`. Field mapping follows Ignav's published docs and tolerates close variants; not yet verified against a live key from this repository. |
+| **Ignav** | Implemented and verified against the live API (November 2026): one-way and round-trip fares, Ignav's own self-transfer combinations, booking links on demand (airline or agency page with the flight selected when Ignav has one). Needs `IGNAV_API_KEY`. No multi-city, metro codes or checked-bag prices (see "Real flights"). |
 | **Duffel** (Flights API v2) | Implemented (offer requests, mapping, errors, retry, caching ≤ 5 min). Needs `DUFFEL_ACCESS_TOKEN`. Search only: booking needs the Orders API and payments, which are out of scope. |
 | Amadeus Self-Service | Not implemented: third-party migration guides report the self-service APIs were shut down on 17 July 2026 (enterprise access needs a contract). Confirm with Amadeus before relying on it. |
 | Kiwi Tequila | Not implemented: public sign-up was closed to new partners as far as known; not verifiable from the build environment. |
 
-Live-provider searches are budgeted (`DUFFEL_MAX_CALLS_PER_SEARCH`, default 12): the planner spends calls on
+Live-provider searches are budgeted (`IGNAV_MAX_CALLS_PER_SEARCH`, default 24; `DUFFEL_MAX_CALLS_PER_SEARCH`,
+default 12): the planner spends calls on
 the requested airports and central dates first, then nearby airports, hubs and positioning. Wide searches
 (whole month, many airports) therefore cover fewer combinations with a live provider than with the demo
 network; the status bar shows how many queries ran. In-memory caches and rate limits are per instance unless
@@ -173,7 +180,8 @@ large/medium airports, with IANA time zones from [mwgg/Airports](https://github.
 
 1. Validate the Duffel adapter against a live `duffel_test_` token (fixture-tested only; `api.duffel.com`
    was not reachable from the build environment) and tune call budgets to the account's rate limits.
-2. Booking hand-off: Duffel Orders + payment flow, or deep links from an affiliate/metasearch partner.
+2. Booking inside the app (Duffel Orders + payments) stays out of scope; booking hand-off works through
+   Ignav's links to airline and agency pages.
 3. Additional licensed sources (e.g. an Amadeus Enterprise or Travelport contract, airline NDC partners).
 4. Verify `FX_SOURCE=ecb` against the live ECB feed (implemented, but the feed was not reachable from the
    build environment; bundled approximate rates are used meanwhile).

@@ -73,9 +73,16 @@ export class IgnavProvider implements FlightProvider {
       throw new ProviderError((err as Error).message, 'invalid-request');
     }
     const json = await this.post(request.path, request.body, ctx.signal);
-    const itineraries = (json as { itineraries?: unknown }).itineraries;
+    const { itineraries, observed_at: observed } = json as { itineraries?: unknown; observed_at?: unknown };
     if (!Array.isArray(itineraries)) return [];
-    const mapCtx = { now: ctx.now, passengers: query.passengers, bags: query.bags, tzOf: this.opts.tzOf };
+    const observedAt = typeof observed === 'string' ? Date.parse(observed) : NaN;
+    const mapCtx = {
+      now: ctx.now,
+      observedAt: Number.isFinite(observedAt) ? observedAt : undefined,
+      passengers: query.passengers,
+      bags: query.bags,
+      tzOf: this.opts.tzOf,
+    };
     return itineraries
       .map((it) => (typeof it === 'object' && it ? mapIgnavItinerary(it as Record<string, unknown>, mapCtx, query.cabin) : null))
       .filter((o): o is FareOffer => o !== null);

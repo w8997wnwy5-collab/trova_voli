@@ -56,6 +56,8 @@ export function BookingLinks({ providerId, handle }: { providerId: string; handl
             <span className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{l.providerName}</span>
               {l.providerType && <Badge>{l.providerType}</Badge>}
+              {l.exactFlight === true && <Badge tone="good">flight pre-selected</Badge>}
+              {l.exactFlight === false && <Badge tone="neutral">search page</Badge>}
               {l.fareName && <span className="text-xs text-ink-muted">{l.fareName}</span>}
               {l.legs && <span className="text-xs text-ink-muted">{l.legs}</span>}
             </span>

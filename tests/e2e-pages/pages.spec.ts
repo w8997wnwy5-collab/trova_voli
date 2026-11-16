@@ -12,6 +12,8 @@ test('static site: search runs in the browser end to end', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('./');
+  // The submit button is enabled once the app has hydrated; typing earlier can lose keystrokes.
+  await expect(page.getByRole('button', { name: 'Search flights' })).toBeEnabled();
   await page.getByRole('combobox', { name: 'From' }).fill('Milan');
   await page.getByRole('listbox', { name: 'From suggestions' }).getByRole('option').first().click();
   await page.getByRole('combobox', { name: 'To' }).fill('London');

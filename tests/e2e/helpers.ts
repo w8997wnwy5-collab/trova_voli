@@ -14,7 +14,13 @@ export async function waitForResults(page: Page) {
   await expect(page.getByRole('heading', { name: /\d+ options?/ })).toBeVisible({ timeout: 30_000 });
 }
 
+/** The search form enables its submit button once hydrated; typing earlier can lose keystrokes. */
+export async function waitForForm(page: Page) {
+  await expect(page.getByRole('button', { name: /^(Search flights|Update search)$/ })).toBeEnabled();
+}
+
 export async function pickLocation(page: Page, field: 'From' | 'To', text: string) {
+  await waitForForm(page);
   await page.getByRole('combobox', { name: field }).fill(text);
   await page.getByRole('listbox', { name: `${field} suggestions` }).getByRole('option').first().click();
 }

@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { searchUrl, waitForResults } from './helpers';
+import { searchUrl, waitForForm, waitForResults } from './helpers';
 
 async function seriousViolations(page: import('@playwright/test').Page) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -25,6 +25,7 @@ test('results page and strategy drawer have no serious accessibility violations'
 
 test('core flow works with the keyboard only', async ({ page }) => {
   await page.goto('/');
+  await waitForForm(page);
   await page.getByRole('combobox', { name: 'From' }).focus();
   await page.keyboard.type('Rome');
   await expect(page.getByRole('listbox', { name: 'From suggestions' })).toBeVisible();

@@ -58,14 +58,16 @@ export function buildIgnavSearch(q: ProviderQuery, market: string): { path: stri
     departure_date: out.departureDate,
     adults: q.passengers.adults,
     cabin_class: q.cabin,
-    max_stops: q.maxConnections,
     market,
   };
   // Only send optional fields that are set: Ignav rejects unexpected or empty values.
   if (q.passengers.children) body.children = q.passengers.children;
   if (q.passengers.infants) body.infants_on_lap = q.passengers.infants;
+  // Measured on the live API: with `min_carry_on_bags` the fare includes the cabin-bag fee (e.g. Ryanair
+  // 52 → 88 EUR), but only when `max_stops` is absent; `min_checked_bags` never changes the price. So the
+  // cabin bag is priced by Ignav, stops are filtered by us, and checked bags are estimated per airline.
   if (q.bags?.carryOn) body.min_carry_on_bags = 1;
-  if (q.bags?.checked) body.min_checked_bags = q.bags.checked;
+  else body.max_stops = q.maxConnections;
   if (back) {
     if (back.origin !== out.destination || back.destination !== out.origin) {
       throw new Error('Ignav adapter only supports one-way and round trips');
@@ -77,14 +79,19 @@ export function buildIgnavSearch(q: ProviderQuery, market: string): { path: stri
 
 export interface MapContext {
   now: number;
+  /** When Ignav observed the fares (response `observed_at`), if given. */
+  observedAt?: number;
   passengers: PassengerCounts;
   bags?: ProviderQuery['bags'];
   tzOf: (code: string) => string | undefined;
 }
 
-function mapSegment(s: Json, ctx: MapContext): FlightSegment | null {
+function mapSegment(s: Json, ctx: MapContext, legCarrier?: string): FlightSegment | null {
   const carrier = text(s, ['marketing_carrier_code', 'carrier_code', 'airline_code']);
-  const carrierName = text(s, ['marketing_carrier_name', 'carrier_name', 'airline_name']) ?? carrier;
+  // Segments carry only the airline code; the name comes from the leg (single-airline legs) or the
+  // operating airline name when no separate operating code is given.
+  const carrierName =
+    text(s, ['marketing_carrier_name', 'carrier_name', 'airline_name']) ?? legCarrier ?? (text(s, ['operating_carrier_code']) ? undefined : text(s, ['operating_carrier_name'])) ?? carrier;
   const flight = text(s, ['flight_number', 'number']);
   const origin = text(s, ['origin', 'departure_airport', 'departure_airport_code', 'origin_airport', 'from']);
   const destination = text(s, ['destination', 'arrival_airport', 'arrival_airport_code', 'destination_airport', 'to']);
@@ -124,18 +131,23 @@ export function mapIgnavItinerary(it: Json, ctx: MapContext, cabin: FareOffer['s
   if (!legs.length) return null;
   const slices = [];
   for (const leg of legs) {
-    const segs = Array.isArray(leg.segments) ? leg.segments.filter(isObj).map((s) => mapSegment(s, ctx)) : [];
+    const raw = Array.isArray(leg.segments) ? leg.segments.filter(isObj) : [];
+    const codes = new Set(raw.map((s) => text(s, ['marketing_carrier_code'])));
+    const legCarrier = codes.size === 1 ? text(leg, ['carrier']) : undefined;
+    const segs = raw.map((s) => mapSegment(s, ctx, legCarrier));
     if (!segs.length || segs.some((s) => s === null)) return null;
     slices.push({ segments: (segs as FlightSegment[]).map((s) => ({ ...s, cabin })) });
   }
-  const bags = isObj(it.bags) ? it.bags : {};
-  const included = (keys: string[], requested?: number) => {
-    const n = num(bags, keys);
-    if (n !== undefined) return n;
-    // Searched with the user's bags as a filter: the price already covers them.
-    return requested ? requested : null;
-  };
   const first = slices[0].segments[0];
+  const segments = slices.flatMap((sl) => sl.segments);
+  const bags = isObj(it.bags) ? it.bags : {};
+  const statedCarryOn = num(bags, ['carry_on', 'carry_on_bags', 'cabin']);
+  const statedChecked = num(bags, ['checked', 'checked_bags']);
+  // Checked bags are never priced by Ignav: infer the allowance from the airline type.
+  const lowCost = segments.some((sg) => LOW_COST.has(sg.marketingCarrier.code));
+  const longHaul = segments.some((sg) => sg.durationMinutes >= 330);
+  const inferredChecked = statedChecked ?? (lowCost ? 0 : longHaul && cabin === 'economy' ? 1 : cabin === 'economy' ? null : 1);
+  const currency = price.currency;
   return {
     id: `ignav:${id}`,
     providerId: 'ignav',
@@ -146,34 +158,55 @@ export function mapIgnavItinerary(it: Json, ctx: MapContext, cabin: FareOffer['s
     passengers: ctx.passengers,
     validatingCarrier: first.marketingCarrier,
     baggage: {
-      carryOn: included(['carry_on', 'carry_on_bags', 'cabin'], ctx.bags?.carryOn ? 1 : 0),
-      checked: included(['checked', 'checked_bags'], ctx.bags?.checked ?? 0),
+      // Searched with the cabin-bag filter: its fee is already in the price.
+      carryOn: statedCarryOn ?? (ctx.bags?.carryOn ? 1 : null),
+      checked: inferredChecked,
     },
+    // Other currencies fall back to the cost engine's EUR estimate, converted.
+    bagFees: lowCost && ESTIMATED_LCC_CHECKED_BAG[currency] ? { checked: money(ESTIMATED_LCC_CHECKED_BAG[currency], currency), source: 'estimate' } : undefined,
+    baggageAssumed: statedChecked === undefined && inferredChecked !== null,
     booking: {
       channel: 'links',
       sellerName: 'Airline or travel agency',
       handle: id,
-      note: 'Live booking pages (airline or agency) are listed when you ask for them.',
+      note:
+        isObj(it.price) && typeof it.price.status === 'string' && it.price.status !== 'verified'
+          ? `Price status from Ignav: ${it.price.status}. Booking pages are listed when you ask for them.`
+          : 'Booking pages (airline or agency) are listed when you ask for them.',
     },
     conditions: { refundable: null, changeable: null },
-    fetchedAt: ctx.now,
+    fetchedAt: ctx.observedAt && ctx.observedAt <= ctx.now ? ctx.observedAt : ctx.now,
     expiresAt: ctx.now + 30 * 60_000,
     dataQuality: 'live',
     selfTransfer: it.requires_self_transfer === true,
   };
 }
 
+const LEG_NAMES: Record<string, string> = { outbound: 'Outbound', inbound: 'Return' };
+
+/** Airlines whose basic fares exclude checked bags (and usually the cabin trolley). */
+export const LOW_COST = new Set([
+  'FR', 'RK', 'AL', 'U2', 'EC', 'DS', 'W6', 'W4', 'W9', '5W', 'VY', 'V7', 'HV', 'TO', 'DY', 'D8', 'EW', 'LS', 'PC',
+  'XQ', 'BY', 'F9', 'NK', 'G4', 'AK', 'D7', 'FD', '3K', 'TR', 'JQ', 'G9', 'FZ', 'J9', 'XY', 'SG', '6E', 'IX', '7C',
+  'MM', 'BX', 'ZE', 'TW', 'LJ', 'OV', 'H4', '0B', 'FH', 'I2', 'X3', '4U',
+]);
+
+/** Typical online price of one 20 kg checked bag per flight on low-cost airlines (estimate). */
+const ESTIMATED_LCC_CHECKED_BAG: Record<string, number> = { EUR: 35, GBP: 30, USD: 40, CHF: 35 };
+
 function describeLegs(legs: unknown): string | undefined {
   if (!Array.isArray(legs)) return undefined;
   const parts = legs
-    .filter(isObj)
     .map((l) => {
+      if (typeof l === 'string') return LEG_NAMES[l] ?? l;
+      if (!isObj(l)) return undefined;
       const o = text(l, ['origin', 'departure_airport', 'from']);
       const d = text(l, ['destination', 'arrival_airport', 'to']);
       return o && d ? `${o} → ${d}` : undefined;
     })
     .filter(Boolean);
-  return parts.length ? parts.join(', ') : undefined;
+  // A single option covering the whole trip needs no label.
+  return parts.length && !(parts.length === 2 && parts[0] === 'Outbound' && parts[1] === 'Return') ? parts.join(' + ') : undefined;
 }
 
 /** Booking links from `{itinerary, booking_options: [{legs, links: [{provider_name, provider_type, fare_name, price, url}]}]}`. */
@@ -196,6 +229,7 @@ export function mapBookingLinks(json: unknown): BookingLink[] {
         price: parsePrice(l.price),
         url,
         legs,
+        exactFlight: l.specificity === undefined ? undefined : l.specificity === 'exact_flight',
       });
     }
   }
