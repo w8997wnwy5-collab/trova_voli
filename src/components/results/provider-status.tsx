@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, CircleSlash, Clock, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { fmtAge } from '@/lib/client/format';
-import { STATIC_MODE } from '@/lib/client/runtime';
+import { LIVE_APP_URL, STATIC_MODE } from '@/lib/client/runtime';
 import type { ProviderStatus, SearchResponse } from '@/lib/domain/types';
 
 const STATUS: Record<ProviderStatus['status'], { label: string; tone: 'good' | 'warn' | 'bad' | 'neutral'; icon: typeof Clock }> = {
@@ -26,9 +26,17 @@ export function ProviderStatusBar({ data, now }: { data: SearchResponse; now: nu
           <p>
             <strong>Demo data.</strong> Results marked &ldquo;Demo&rdquo; come from a fictional airline network so you can try every feature. They are not real
             fares or flights and cannot be booked.{' '}
-            {STATIC_MODE
-              ? 'This is the static GitHub Pages version: searching real fares needs the server version with a Duffel key.'
-              : 'Connect a live provider (Duffel) to search real offers.'}
+            {STATIC_MODE ? (
+              LIVE_APP_URL ? (
+                <a href={LIVE_APP_URL} className="font-semibold underline">
+                  Open the version with real flights.
+                </a>
+              ) : (
+                'This is the static GitHub Pages demo: real fares need the server version with a flight data key.'
+              )
+            ) : (
+              'Add a live provider key (Ignav or Duffel) to search real offers.'
+            )}
           </p>
         </div>
       )}

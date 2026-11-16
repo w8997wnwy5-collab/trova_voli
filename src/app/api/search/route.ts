@@ -7,6 +7,8 @@ import { logger } from '@/lib/server/logger';
 import { clientKey } from '@/lib/server/rate-limit';
 
 const MAX_BODY_BYTES = 20_000;
+// Live providers can take tens of seconds; platforms read this to set the function time limit.
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();

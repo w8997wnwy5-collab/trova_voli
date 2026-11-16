@@ -108,7 +108,7 @@ async function runForProvider(
         if (e.kind === 'timeout') timeouts++;
         lastError = e;
         // Circuit breaker: do not hammer a provider that rejects us.
-        if (e.kind === 'auth' || e.kind === 'rate-limit' || e.kind === 'simulated') stopped = true;
+        if (e.kind === 'auth' || e.kind === 'billing' || e.kind === 'rate-limit' || e.kind === 'simulated') stopped = true;
       }
     }
   };

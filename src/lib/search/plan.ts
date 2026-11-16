@@ -1,4 +1,4 @@
-import { distanceKm, getAirport, metroOf, METRO_AREAS, nearbyAirports, resolveLocation } from '@/lib/data/airports';
+import { distanceKm, getAirport, isMetroCode, metroOf, METRO_AREAS, nearbyAirports, resolveLocation } from '@/lib/data/airports';
 import { CONNECTION_HUBS } from '@/lib/data/hubs';
 import { addDays, daysBetween, DEFAULT_NIGHTS, monthDays, todayUtc, type SearchRequest } from '@/lib/domain/schemas';
 import type { TripType } from '@/lib/domain/types';
@@ -199,8 +199,9 @@ export function planTasks(spec: TripSpec, req: SearchRequest): PlannedTask[] {
       cabin: spec.cabin,
       currency: spec.currency,
       maxConnections: kind === 'ow' && purpose === 'hub' ? 1 : 2,
+      bags: spec.bags,
     };
-    const key = JSON.stringify([slices, spec.passengers, spec.cabin, spec.currency, query.maxConnections]);
+    const key = taskKey(query);
     const existing = tasks.get(key);
     if (!existing || existing.priority > priority) tasks.set(key, { key, kind, purpose, priority, query });
   };
@@ -307,22 +308,51 @@ export function planTasks(spec: TripSpec, req: SearchRequest): PlannedTask[] {
   return [...tasks.values()].sort((a, b) => a.priority - b.priority || a.key.localeCompare(b.key));
 }
 
-/** Tasks each provider can serve (capabilities + route coverage). */
+/** Cache/identity key of a provider query. */
+export function taskKey(q: ProviderQuery): string {
+  return JSON.stringify([q.slices, q.passengers, q.cabin, q.currency, q.maxConnections, q.bags ?? null]);
+}
+
+/** Airports of a metro area, most useful first (busiest hubs and low-cost bases), at most `limit`. */
+function mainAirports(code: string, limit: number): string[] {
+  const weight = (a: string) => CONNECTION_HUBS[a] ?? (getAirport(a)?.size === 'L' ? 0.5 : 0.2);
+  return [...resolveLocation(code)].sort((a, b) => weight(b) - weight(a) || a.localeCompare(b)).slice(0, limit);
+}
+
+/** For providers that only take airport codes: one task per airport combination, main airports first. */
+export function expandToAirports(t: PlannedTask, limit = 3): PlannedTask[] {
+  const metros = [...new Set(t.query.slices.flatMap((s) => [s.origin, s.destination]).filter(isMetroCode))];
+  if (!metros.length) return [t];
+  const choices = metros.map((m) => mainAirports(m, limit));
+  const combos = choices.reduce<string[][]>((acc, list) => acc.flatMap((prefix) => list.map((a) => [...prefix, a])), [[]]);
+  return combos.map((combo, i) => {
+    const pick = new Map(metros.map((m, k) => [m, combo[k]]));
+    const slices = t.query.slices.map((s) => ({ ...s, origin: pick.get(s.origin) ?? s.origin, destination: pick.get(s.destination) ?? s.destination }));
+    const query = { ...t.query, slices };
+    return { ...t, query, key: taskKey(query), priority: t.priority + i * 0.5 };
+  });
+}
+
+/** Tasks each provider can serve (capabilities + route coverage), in priority order. */
 export function assignTasks(tasks: PlannedTask[], providers: FlightProvider[]): Map<string, PlannedTask[]> {
   const out = new Map<string, PlannedTask[]>();
   for (const p of providers) {
     const cap = p.capabilities;
-    out.set(
-      p.id,
-      tasks.filter((t) => {
-        const n = t.query.slices.length;
-        if (n > cap.maxSlices) return false;
-        if (t.kind === 'rt' && !cap.roundTrip) return false;
-        if (t.kind === 'mc' && !cap.multiCity) return false;
-        if (!p.supportsRoute) return true;
-        return t.query.slices.every((s) => locationsSupported(p, s.origin, s.destination));
-      }),
-    );
+    const supported = tasks.filter((t) => {
+      const n = t.query.slices.length;
+      if (n > cap.maxSlices) return false;
+      if (t.kind === 'rt' && !cap.roundTrip) return false;
+      if (t.kind === 'mc' && !cap.multiCity) return false;
+      if (!p.supportsRoute) return true;
+      return t.query.slices.every((s) => locationsSupported(p, s.origin, s.destination));
+    });
+    if (cap.cityCodes === false) {
+      const seen = new Set<string>();
+      const expanded = supported.flatMap((t) => expandToAirports(t)).filter((t) => (seen.has(t.key) ? false : (seen.add(t.key), true)));
+      out.set(p.id, expanded.sort((a, b) => a.priority - b.priority || a.key.localeCompare(b.key)));
+    } else {
+      out.set(p.id, supported);
+    }
   }
   return out;
 }

@@ -116,7 +116,8 @@ export function assemble(draft: DraftItinerary, ctx: AssembleContext): Itinerary
     for (let i = 1; i < segments.length; i++) {
       const prev = segments[i - 1];
       const next = segments[i];
-      const selfTransfer = legOf[i] !== legOf[i - 1];
+      // Different tickets, or a provider-built combination of separate tickets inside one offer.
+      const selfTransfer = legOf[i] !== legOf[i - 1] || Boolean(legs[legOf[i]].offer.selfTransfer);
       const airportChange = prev.destination !== next.origin;
       const transfer = airportChange ? toEstimate(ctx, prev.destination, next.origin) : undefined;
       const layover = Math.round((next.departureUtc - prev.arrivalUtc) / 60000);

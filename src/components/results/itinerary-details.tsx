@@ -9,7 +9,11 @@ import { SCORE_COMPONENTS, type TripStrategy } from '@/lib/domain/strategy';
 import type { AirportInfo, Itinerary, JourneyView, RiskFlag } from '@/lib/domain/types';
 import type { Explanation } from '@/lib/engine/explain';
 import { COMPONENT_LABELS, type RankResult, type Scored } from '@/lib/engine/rank';
+import { STATIC_MODE } from '@/lib/client/runtime';
+import type { CabinClass, PassengerCounts } from '@/lib/domain/types';
+import type { LinkSearch } from '@/lib/util/deeplinks';
 import { dayOffset, formatDay, formatDuration, formatTime } from '@/lib/util/format';
+import { BookingLinks, CheckElsewhere } from './booking-links';
 
 const CABIN_LABEL = { economy: 'Economy', premium_economy: 'Premium economy', business: 'Business', first: 'First' } as const;
 
@@ -219,7 +223,22 @@ function Why({ scored, ranking, explanation }: { scored: Scored; ranking: RankRe
 
 const FLAG_ICON: Record<RiskFlag['severity'], typeof Info> = { critical: AlertTriangle, warning: CircleAlert, info: Info };
 
-function Booking({ it, now }: { it: Itinerary; now: number }) {
+export interface SearchContext {
+  passengers: PassengerCounts;
+  cabin: CabinClass;
+  currency: string;
+}
+
+/** Route and dates flown on one ticket, for pre-filled searches elsewhere. */
+function ticketSearch(it: Itinerary, ticket: number, ctx: SearchContext): LinkSearch {
+  const slices = it.journeys
+    .map((j) => j.segments.filter((s) => s.ticket === ticket))
+    .filter((segs) => segs.length > 0)
+    .map((segs) => ({ origin: segs[0].origin, destination: segs[segs.length - 1].destination, date: segs[0].departureLocal.slice(0, 10) }));
+  return { slices, passengers: ctx.passengers, cabin: ctx.cabin, currency: ctx.currency };
+}
+
+function Booking({ it, now, search }: { it: Itinerary; now: number; search: SearchContext }) {
   return (
     <div className="grid gap-4">
       <ul className="grid gap-3">
@@ -253,9 +272,12 @@ function Booking({ it, now }: { it: Itinerary; now: number }) {
               <a href={t.booking.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-medium text-brand underline">
                 Book with {t.booking.sellerName}
               </a>
+            ) : t.booking.handle && !STATIC_MODE ? (
+              <BookingLinks providerId={t.providerId} handle={t.booking.handle} />
             ) : (
               <p className="mt-2 text-xs text-ink-muted">{t.booking.note ?? 'No booking link from this provider.'}</p>
             )}
+            <CheckElsewhere search={ticketSearch(it, t.index, search)} demo={t.dataQuality === 'demo'} />
           </li>
         ))}
       </ul>
@@ -309,6 +331,7 @@ export function ItineraryDetails({
   airports,
   strategy,
   now,
+  search,
 }: {
   scored: Scored;
   ranking: RankResult;
@@ -316,6 +339,7 @@ export function ItineraryDetails({
   airports: Record<string, AirportInfo>;
   strategy: TripStrategy;
   now: number;
+  search: SearchContext;
 }) {
   const tabs = [
     { value: 'timeline', label: 'Timeline' },
@@ -346,7 +370,7 @@ export function ItineraryDetails({
         <Why scored={scored} ranking={ranking} explanation={explanation} />
       </Tabs.Content>
       <Tabs.Content value="booking">
-        <Booking it={scored.it} now={now} />
+        <Booking it={scored.it} now={now} search={search} />
       </Tabs.Content>
     </Tabs.Root>
   );

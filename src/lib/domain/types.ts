@@ -74,7 +74,8 @@ export interface BagFees {
   source: 'provider' | 'estimate';
 }
 
-export type BookingChannel = 'airline' | 'ota' | 'api';
+/** 'links': booking options (airline and agencies) are fetched on demand from the provider. */
+export type BookingChannel = 'airline' | 'ota' | 'api' | 'links';
 
 export interface BookingInfo {
   channel: BookingChannel;
@@ -82,6 +83,8 @@ export interface BookingInfo {
   /** Deep link when the provider supplies one. Never constructed by us for real providers. */
   url?: string;
   note?: string;
+  /** Opaque, provider-scoped handle used to fetch booking links on demand (e.g. Ignav's ignav_id). */
+  handle?: string;
 }
 
 /** A bookable product returned by one provider: exactly one ticket (one or more slices). */
@@ -107,6 +110,8 @@ export interface FareOffer {
   expiresAt?: number;
   dataQuality: DataQuality;
   seatsLeft?: number;
+  /** The provider combined separately ticketed flights: its connections are not protected. */
+  selfTransfer?: boolean;
 }
 
 // ---------------------------------------------------------------------------

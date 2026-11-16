@@ -17,6 +17,7 @@ ranks them by **total trip cost**, time and risk, with every trade-off explained
 
 > Without provider credentials the app runs on a **demo network**: fictional airlines over real airports,
 > deterministic synthetic fares. Demo results are labelled everywhere and are never presented as real.
+> **Real fares with booking links** need the server version with an Ignav key (see "Real flights" below).
 
 ## Online demo (GitHub Pages)
 
@@ -40,6 +41,27 @@ npm run preview:pages
 ```
 
 Then open http://localhost:4173/trova_voli/.
+
+## Real flights and booking links
+
+The live source is **[Ignav](https://ignav.com)**: live fares (including its own self-transfer combinations)
+and, per itinerary, booking pages of airlines and agencies with the flight already selected ("Show where to
+book" in the Booking tab). Every ticket also links to the same route and dates on Google Flights and
+Skyscanner. API keys must stay secret, so live fares need the server version; the GitHub Pages site stays a
+demo.
+
+Free deployment on Vercel:
+
+1. Create an Ignav account and copy the API key (first 1,000 requests free, no card).
+2. On vercel.com, sign in with GitHub, **Add New → Project**, import `trova_voli`.
+3. Add the environment variables `IGNAV_API_KEY` (the key) and `ENABLE_DEMO_PROVIDERS` = `false`, then
+   **Deploy**.
+4. Optional: in the repository settings add the Actions variable `LIVE_APP_URL` with the Vercel address;
+   the GitHub Pages demo then links to it.
+
+Each search makes at most `IGNAV_MAX_CALLS_PER_SEARCH` (default 24) fare requests; booking links cost one
+request each and are fetched only when asked. Metro codes (MIL, LON) are expanded to their three main
+airports, because Ignav accepts airport codes only.
 
 ## Quick start (full version with server)
 
@@ -131,6 +153,7 @@ stale price, unknown baggage, few seats.
 | Source | Status |
 | --- | --- |
 | Demo Air Network / Demo Budget Finder | Built in. Fictional airlines, deterministic fares, not bookable. |
+| **Ignav** | Implemented: live one-way and round-trip fares, self-transfer combinations, booking links on demand. Needs `IGNAV_API_KEY`. Field mapping follows Ignav's published docs and tolerates close variants; not yet verified against a live key from this repository. |
 | **Duffel** (Flights API v2) | Implemented (offer requests, mapping, errors, retry, caching ≤ 5 min). Needs `DUFFEL_ACCESS_TOKEN`. Search only: booking needs the Orders API and payments, which are out of scope. |
 | Amadeus Self-Service | Not implemented: third-party migration guides report the self-service APIs were shut down on 17 July 2026 (enterprise access needs a contract). Confirm with Amadeus before relying on it. |
 | Kiwi Tequila | Not implemented: public sign-up was closed to new partners as far as known; not verifiable from the build environment. |

@@ -1,4 +1,5 @@
 import { Building2, Calculator, ShieldCheck, Shuffle } from 'lucide-react';
+import { DemoNotice } from '@/components/home/demo-notice';
 import { ExampleLinks } from '@/components/home/example-links';
 import { HomeSearch } from '@/components/home/home-search';
 
@@ -28,6 +29,7 @@ const FEATURES = [
 export default function HomePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <DemoNotice />
       <section aria-labelledby="hero" className="mb-8 max-w-3xl">
         <h1 id="hero" className="text-3xl font-bold tracking-tight sm:text-4xl">
           The cheapest <span className="text-brand">practical</span> way to fly.

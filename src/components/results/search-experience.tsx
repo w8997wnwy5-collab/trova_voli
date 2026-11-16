@@ -287,6 +287,11 @@ export function SearchExperience() {
                       airports={data.airports}
                       strategy={strategy}
                       tripType={url.request.tripType ?? 'return'}
+                      search={{
+                        passengers: { adults: url.request.passengers?.adults ?? 1, children: url.request.passengers?.children ?? 0, infants: url.request.passengers?.infants ?? 0 },
+                        cabin: url.request.cabin ?? 'economy',
+                        currency,
+                      }}
                       expanded={expanded.has(s.it.id)}
                       onToggle={() =>
                         setExpanded((prev) => {

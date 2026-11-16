@@ -26,6 +26,9 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build:pages
+        env:
+          # Optional repository variable: address of the version with live fares, linked from the demo.
+          LIVE_APP_URL: ${{ vars.LIVE_APP_URL }}
       - run: npx playwright install --with-deps chromium
       - run: npm run test:pages
       - uses: actions/upload-pages-artifact@v4

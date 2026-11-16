@@ -17,7 +17,11 @@ const nextConfig: NextConfig = {
   // Partial prerendering (Cache Components) needs a server; static export renders everything at build.
   ...(staticExport ? {} : { cacheComponents: true, partialPrefetching: true }),
   poweredByHeader: false,
-  env: { NEXT_PUBLIC_STATIC_EXPORT: staticExport ? '1' : '0' },
+  env: {
+    NEXT_PUBLIC_STATIC_EXPORT: staticExport ? '1' : '0',
+    // The static demo can point to the deployment with live fares (repository variable LIVE_APP_URL).
+    NEXT_PUBLIC_LIVE_APP_URL: staticExport ? (process.env.LIVE_APP_URL ?? '') : '',
+  },
   turbopack: {
     rules: {
       '*.css': {

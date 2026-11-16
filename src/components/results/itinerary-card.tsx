@@ -10,7 +10,7 @@ import type { AirportInfo, ItineraryTag, TripType } from '@/lib/domain/types';
 import type { Explanation } from '@/lib/engine/explain';
 import type { RankResult, Scored } from '@/lib/engine/rank';
 import { dayOffset, formatDuration, formatTime } from '@/lib/util/format';
-import { ItineraryDetails, journeyTitle } from './itinerary-details';
+import { ItineraryDetails, journeyTitle, type SearchContext } from './itinerary-details';
 
 const TAG_LABEL: Partial<Record<ItineraryTag, { label: string; tone: Tone }>> = {
   conventional: { label: 'Conventional', tone: 'neutral' },
@@ -36,6 +36,7 @@ export interface CardProps {
   airports: Record<string, AirportInfo>;
   strategy: TripStrategy;
   tripType: TripType;
+  search: SearchContext;
   expanded: boolean;
   onToggle: () => void;
   compared: boolean;
@@ -157,7 +158,7 @@ export function ItineraryCard(p: CardProps) {
         </div>
       </div>
       <div id={`${id}-details`} hidden={!p.expanded}>
-        {p.expanded && <ItineraryDetails scored={scored} ranking={ranking} explanation={explanation} airports={p.airports} strategy={p.strategy} now={p.now} />}
+        {p.expanded && <ItineraryDetails scored={scored} ranking={ranking} explanation={explanation} airports={p.airports} strategy={p.strategy} now={p.now} search={p.search} />}
       </div>
     </article>
   );

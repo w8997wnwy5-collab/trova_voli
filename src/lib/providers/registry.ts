@@ -2,6 +2,7 @@ import 'server-only';
 import { getAirport } from '@/lib/data/airports';
 import { config } from '@/lib/server/config';
 import { DuffelProvider } from './duffel/provider';
+import { IgnavProvider } from './ignav/provider';
 import { MockProvider } from './mock/provider';
 import type { FlightProvider, InactiveProvider } from './types';
 
@@ -22,6 +23,20 @@ export function getProviders(): { active: FlightProvider[]; inactive: InactivePr
       new MockProvider({ id: 'demo-network', name: 'Demo Air Network', personality: 'network', latencyMs: [min, max] }),
       new MockProvider({ id: 'demo-budget', name: 'Demo Budget Finder', personality: 'budget', latencyMs: [min, max] }),
     );
+  }
+
+  if (cfg.IGNAV_API_KEY) {
+    active.push(
+      new IgnavProvider({
+        apiKey: cfg.IGNAV_API_KEY,
+        market: cfg.IGNAV_MARKET,
+        maxCallsPerSearch: cfg.IGNAV_MAX_CALLS_PER_SEARCH,
+        maxConcurrency: cfg.IGNAV_MAX_CONCURRENCY,
+        tzOf: (code) => getAirport(code)?.tz,
+      }),
+    );
+  } else {
+    inactive.push({ id: 'ignav', name: 'Ignav', reason: 'Not configured (set IGNAV_API_KEY)' });
   }
 
   if (cfg.DUFFEL_ACCESS_TOKEN) {

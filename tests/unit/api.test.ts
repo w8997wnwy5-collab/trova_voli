@@ -53,3 +53,21 @@ describe('POST /api/search', () => {
     expect(statuses).toContain(429);
   });
 });
+
+describe('POST /api/booking-links', () => {
+  const req = (body: unknown) =>
+    new Request('http://localhost/api/booking-links', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '10.1.1.1' },
+      body: JSON.stringify(body),
+    });
+
+  it('validates input and refuses sources without booking links', async () => {
+    vi.resetModules();
+    const { POST } = await import('@/app/api/booking-links/route');
+    expect((await POST(req({ provider: 'demo-network' }))).status).toBe(400);
+    const res = await POST(req({ provider: 'demo-network', handle: 'abcd1234' }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('not_supported');
+  });
+});
